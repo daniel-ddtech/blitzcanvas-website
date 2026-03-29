@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BlitzCanvas</title>
+<meta name="description" content="Lightning-fast infinite canvas for terminals and AI agents">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #08080a;
+  --surface: #111114;
+  --border: #1e1e24;
+  --text-primary: #e8e8ed;
+  --text-secondary: #6e6e7a;
+  --accent: #4f8fff;
+  --accent-dim: rgba(79, 143, 255, 0.08);
+  --glow: rgba(79, 143, 255, 0.15);
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: 'Instrument Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Animated grid background */
+.grid-bg {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.grid-bg canvas {
+  width: 100%;
+  height: 100%;
+  opacity: 0.4;
+}
+
+/* Radial glow */
+.glow-orb {
+  position: fixed;
+  width: 800px;
+  height: 800px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--glow) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -55%);
+  z-index: 1;
+  animation: orb-breathe 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes orb-breathe {
+  0%, 100% { opacity: 0.6; transform: translate(-50%, -55%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -55%) scale(1.15); }
+}
+
+/* Secondary subtle orb */
+.glow-orb-secondary {
+  position: fixed;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(130, 80, 255, 0.06) 0%, transparent 70%);
+  top: 60%;
+  left: 55%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  animation: orb-drift 12s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes orb-drift {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-45%, -55%) scale(1.2); }
+}
+
+/* Content */
+.content {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 40px;
+}
+
+/* Logo mark */
+.logo-mark {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 4px;
+}
+
+.logo-mark span {
+  display: block;
+  width: 3px;
+  height: 18px;
+  background: var(--accent);
+  border-radius: 1px;
+  animation: bar-pulse 2.4s ease-in-out infinite;
+}
+
+.logo-mark span:nth-child(1) { height: 10px; animation-delay: 0s; }
+.logo-mark span:nth-child(2) { height: 18px; animation-delay: 0.15s; }
+.logo-mark span:nth-child(3) { height: 14px; animation-delay: 0.3s; }
+.logo-mark span:nth-child(4) { height: 20px; animation-delay: 0.45s; }
+.logo-mark span:nth-child(5) { height: 12px; animation-delay: 0.6s; }
+
+@keyframes bar-pulse {
+  0%, 100% { opacity: 0.4; transform: scaleY(1); }
+  50% { opacity: 1; transform: scaleY(1.3); }
+}
+
+h1 {
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 700;
+  font-size: clamp(38px, 5vw, 56px);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  background: linear-gradient(180deg, #f0f0f5 30%, #7a7a8a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-align: center;
+}
+
+.tagline {
+  font-size: clamp(14px, 1.8vw, 17px);
+  font-weight: 400;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.5;
+  max-width: 440px;
+  letter-spacing: 0.01em;
+}
+
+.tagline strong {
+  color: #9a9aaa;
+  font-weight: 500;
+}
+
+/* GitHub button */
+.gh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 28px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  text-decoration: none;
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: all 0.25s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.gh-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--accent-dim), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.gh-btn:hover {
+  border-color: #2a2a34;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(79, 143, 255, 0.08);
+}
+
+.gh-btn:hover::before {
+  opacity: 1;
+}
+
+.gh-btn:active {
+  transform: translateY(0);
+}
+
+.gh-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: var(--text-primary);
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+.gh-btn span {
+  position: relative;
+  z-index: 1;
+}
+
+/* Subtle bottom text */
+.footer-text {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #2e2e38;
+  letter-spacing: 0.08em;
+  z-index: 2;
+  text-transform: uppercase;
+}
+
+/* Entrance animations */
+.content > * {
+  animation: fade-up 0.8s ease both;
+}
+
+.content > *:nth-child(1) { animation-delay: 0.1s; }
+.content > *:nth-child(2) { animation-delay: 0.25s; }
+.content > *:nth-child(3) { animation-delay: 0.4s; }
+.content > *:nth-child(4) { animation-delay: 0.55s; }
+
+.footer-text { animation: fade-up 0.8s ease 0.8s both; }
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<div class="grid-bg">
+  <canvas id="gridCanvas"></canvas>
+</div>
+<div class="glow-orb"></div>
+<div class="glow-orb-secondary"></div>
+
+<div class="content">
+  <div class="logo-mark">
+    <span></span><span></span><span></span><span></span><span></span>
+  </div>
+  <h1>BlitzCanvas</h1>
+  <p class="tagline">Lightning-fast <strong>infinite canvas</strong> for terminals and AI agents</p>
+  <a href="https://github.com/daniel-ddtech/blitzcanvas" target="_blank" rel="noopener" class="gh-btn">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+    <span>View on GitHub</span>
+  </a>
+</div>
+
+<div class="footer-text">Open Source &middot; MIT License</div>
+
+<script>
+// Animated dot grid with infinite canvas feel
+const canvas = document.getElementById('gridCanvas');
+const ctx = canvas.getContext('2d');
+let w, h, time = 0;
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  w = canvas.width = window.innerWidth * dpr;
+  h = canvas.height = window.innerHeight * dpr;
+  ctx.scale(dpr, dpr);
+}
+
+function draw() {
+  const cw = window.innerWidth;
+  const ch = window.innerHeight;
+  ctx.clearRect(0, 0, cw, ch);
+
+  const gap = 40;
+  const drift = time * 0.15;
+  const offsetX = drift % gap;
+  const offsetY = (drift * 0.7) % gap;
+
+  const cx = cw / 2;
+  const cy = ch / 2;
+  const maxDist = Math.sqrt(cx * cx + cy * cy);
+
+  for (let x = -gap + offsetX; x < cw + gap; x += gap) {
+    for (let y = -gap + offsetY; y < ch + gap; y += gap) {
+      const dx = x - cx;
+      const dy = y - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const fade = 1 - (dist / maxDist);
+      const pulse = 0.3 + 0.2 * Math.sin(time * 0.02 + dist * 0.008);
+      const alpha = Math.max(0, fade * pulse);
+
+      // Major grid points slightly brighter
+      const isMajor = Math.round(x / gap) % 4 === 0 && Math.round(y / gap) % 4 === 0;
+      const size = isMajor ? 1.4 : 0.8;
+      const brightness = isMajor ? alpha * 1.5 : alpha;
+
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(79, 143, 255, ${Math.min(brightness, 0.5)})`;
+      ctx.fill();
+    }
+  }
+
+  time++;
+  requestAnimationFrame(draw);
+}
+
+window.addEventListener('resize', resize);
+resize();
+draw();
+</script>
+
+</body>
+</html>
